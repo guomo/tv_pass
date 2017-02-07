@@ -24,6 +24,7 @@ var io = socketio.listen(server);
 
 router.use(express.static(path.resolve(__dirname, 'client')));
 router.use(express.bodyParser());
+router.use(express.methodOverride());
 var messages = [];
 var sockets = [];
 
@@ -98,32 +99,58 @@ router.get('/playlists/:esn', function (req, res) {
         res.status(404).send('No playlist found for ' + req.params.esn);
     }else{
       res.json(feed)
-    }
+    } 
   })
 })
+
 
 router.put('/playlists/:esn', function (req, res) {
   
   // Validate the content
   if( !checkFeed(req) ){
-    res.status(404).send('No playlist found for ' + req.params.esn);
+    res.status(400).send('Invalid feed type or missing content');
   }
-      console.log(req.body)
+    //  console.log(req.body)
 
   // Check if we need to replace 
   
     req.body.lastUpdated = new Date();
-    collection.update({esn: req.params.esn, feed: req.body}, {upsert:true, w: 1}, function(err, result) {
+    collection.insert({esn: req.params.esn, feed: req.body}, function(err, result) {
+
+    //collection.update({esn: req.params.esn, feed: req.body}, {upsert:true}, function(err, result) {
     assert.equal(null, err);
     res.send("OK")
-    console.log()
+    console.log("Changed DB")
   })
 })
 
+router.delete('playlists/:esn', function(req,res){
+          console.log("Deleted record: " + req.params.esn)
+
+  /*
+  collection.findOne({"esn":req.params.esn}, function(err, feed) {
+    assert.equal(null, err);
+    if( null == feed ){
+      res.status(204).send('No Content - record did not exist');
+    }else{
+      collection.remove({"esn":req.params.esn}, function(err){
+        assert.equal(null, err);
+        console.log("Deleted record: " + req.params.esn)
+      })
+      res.status(204).send()
+    }
+  })*/
+  
+})
 function checkFeed(req){
   // Check it is JSON content type
+  var retVal = req.is('application/json')
   // Check it parses to actual object
-  return true;
+  console.log(req.body)
+  //retVal = req.body == undefined  ? false : true
+  if(!retVal) {  console.log("Feed check failed for esn:" + req.path) }
+
+  return(retVal)
 }
 
 
@@ -137,7 +164,7 @@ function checkFeed(req){
                         }
                       }
                 );
-    var addr = server.address();
-    console.log("Playlist server listening at", addr.address + ":" + addr.port);
+    var addr = server.address()
+    console.log("Playlist server listening at", addr.address + ":" + addr.port)
   });
 
