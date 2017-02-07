@@ -120,21 +120,21 @@ router.put('/playlists/:esn', function (req, res) {
         collection.remove({"esn":req.params.esn}, function(err){
           assert.equal(null, err)
           console.log("Deleted record: " + req.params.esn)
-          doInsert(req.params.esn, feed)
+          doInsert(req.params.esn, req.body)
         })
     }else{
-      doInsert(req.params.esn, feed)
+      doInsert(req.params.esn, req.body)
     }
   })
+  res.send('OK')
 })
     
 
 function doInsert(esn, feed){
   
-    feed.lastUpdated = new Date();
+    //feed.lastUpdated = new Date();
     collection.insert( {esn: esn, feed: feed}, function(err, result) {
         assert.equal(null, err)
-        res.send("OK")
       }) 
 }
 
