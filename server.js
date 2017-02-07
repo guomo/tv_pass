@@ -93,41 +93,56 @@ router.get('/playlists/', function (req, res) {
 
 router.get('/playlists/:esn', function (req, res) {
     
-  collection.findOne({"esn":req.params.esn}, function(err, feed) {
+  collection.findOne({"esn":req.params.esn}, function(err, record) {
     assert.equal(null, err);
-    if( null == feed ){
+    if( null == record ){
         res.status(404).send('No playlist found for ' + req.params.esn);
     }else{
-      res.json(feed)
+      res.json(record.feed)
     } 
   })
 })
+
 
 
 router.put('/playlists/:esn', function (req, res) {
   
   // Validate the content
   if( !checkFeed(req) ){
-    res.status(400).send('Invalid feed type or missing content');
+    res.status(400).send('Invalid feed type or missing content')
   }
-    //  console.log(req.body)
 
   // Check if we need to replace 
-  
-    req.body.lastUpdated = new Date();
-    collection.insert({esn: req.params.esn, feed: req.body}, function(err, result) {
-
-    //collection.update({esn: req.params.esn, feed: req.body}, {upsert:true}, function(err, result) {
-    assert.equal(null, err);
-    res.send("OK")
-    console.log("Changed DB")
+  collection.findOne( {"esn": req.params.esn}, function(err, feed) {
+    assert.equal(null, err)
+    if( null != feed ){
+        // Delete the old record since put is overwrite semantics
+        collection.remove({"esn":req.params.esn}, function(err){
+          assert.equal(null, err)
+          console.log("Deleted record: " + req.params.esn)
+          doInsert(req.params.esn, feed)
+        })
+    }else{
+      doInsert(req.params.esn, feed)
+    }
   })
 })
+    
+
+function doInsert(esn, feed){
+  
+    feed.lastUpdated = new Date();
+    collection.insert( {esn: esn, feed: feed}, function(err, result) {
+        assert.equal(null, err)
+        res.send("OK")
+      }) 
+}
+
 
 router.delete('playlists/:esn', function(req,res){
           console.log("Deleted record: " + req.params.esn)
 
-  /*
+  
   collection.findOne({"esn":req.params.esn}, function(err, feed) {
     assert.equal(null, err);
     if( null == feed ){
@@ -139,9 +154,11 @@ router.delete('playlists/:esn', function(req,res){
       })
       res.status(204).send()
     }
-  })*/
+  })
   
 })
+
+
 function checkFeed(req){
   // Check it is JSON content type
   var retVal = req.is('application/json')
@@ -152,7 +169,6 @@ function checkFeed(req){
 
   return(retVal)
 }
-
 
 
   server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
@@ -167,4 +183,3 @@ function checkFeed(req){
     var addr = server.address()
     console.log("Playlist server listening at", addr.address + ":" + addr.port)
   });
-
